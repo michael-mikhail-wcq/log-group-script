@@ -15,4 +15,4 @@
 
 
 
-**Note:** Before running the script, ensure that you have provided your AWS credentials. These credentials are necessary for the script to interact with AWS services. Please exercise caution and avoid sharing your credentials with unauthorized individuals.
+**Note:** Before running the script, ensure that you have provided your AWS credentials. These credentials are necessary for the script to interact with AWS services.
