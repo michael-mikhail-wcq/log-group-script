@@ -1,7 +1,7 @@
-To run the script you will need to use:
+**To run the script you will need to use:**
 
-tsc /log-group-script.ts
+_tsc /log-group-retention.ts_
 
-this will extend it into a js file and you will need to use "node" to run the TypeScript script:
+**this will extend it into a js file and you will need to use "node" to run the TypeScript script:**
 
-node /log-group-script.js
+_node /log-group-retention.js_
