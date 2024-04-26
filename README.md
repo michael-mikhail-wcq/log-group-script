@@ -16,3 +16,12 @@
 
 
 **Note:** Before running the script, ensure that you have provided your AWS credentials. These credentials are necessary for the script to interact with AWS services.
+
+For tester script that prints log groups with no retention to a txt file:
+
+   ```
+   tsc /test_log_retention_txtfile.ts
+   ```
+   ```
+   node /test_log_retention_txtfile.js
+   ```
