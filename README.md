@@ -18,7 +18,7 @@
 **Note:** Before running the script, ensure that you have provided your AWS credentials. These credentials are necessary for the script to interact with AWS services.
 
 
-For tester script that prints log groups with no retention to a txt file:
+1. For tester script that prints log groups with no retention to a txt file:
 
    ```
    tsc /WCQ-log-retention-file-test.ts
