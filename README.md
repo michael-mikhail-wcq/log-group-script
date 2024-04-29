@@ -1,7 +1,7 @@
 **To run the script, follow these steps:**
-   ```
-   cd log-group-script
-   ```
+      ```
+      cd log-group-script
+      ```
 
 1. First, compile the TypeScript file into JavaScript by running the following command:
 
