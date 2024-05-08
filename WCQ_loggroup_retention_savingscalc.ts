@@ -1,10 +1,13 @@
 import * as AWS from 'aws-sdk';
 import * as fs from 'fs';
 import * as util from 'util';
-
+// Credentials
 AWS.config.region = 'ap-southeast-2';
 const credentials = new AWS.CognitoIdentityCredentials({
     IdentityPoolId: 'ap-southeast-2:',
+});
+const locationClient = new AWS.Location({
+    credentials,
 });
 const cloudwatchlogs: AWS.CloudWatchLogs = new AWS.CloudWatchLogs();
 
@@ -30,7 +33,7 @@ async function getAllLogGroups(): Promise<string[]> {
 
     return logGroups;
 }
-
+// Function for printing out Log Group details
 async function getLogGroupDetails(logGroupName: string): Promise<AWS.CloudWatchLogs.LogGroup | null> {
     const params: AWS.CloudWatchLogs.DescribeLogGroupsRequest = {
         logGroupNamePrefix: logGroupName
@@ -61,65 +64,58 @@ async function main(): Promise<void> {
     try {
         const logGroups: string[] = await getAllLogGroups();
 
-        const logsWithRetention: string[] = [];
+        const logsWithoutRetention: AWS.CloudWatchLogs.LogGroup[] = [];
 
         for (const logGroupName of logGroups) {
             const logGroupDetails: AWS.CloudWatchLogs.LogGroup | null = await getLogGroupDetails(logGroupName);
             if (logGroupDetails && logGroupDetails.retentionInDays === undefined) {
-                // apply retnetion policy to loggroup
+                logsWithoutRetention.push(logGroupDetails);
+                // Set retention policy for this log group
                 await setRetention(logGroupName);
-            } else if (logGroupDetails && logGroupDetails.retentionInDays !== undefined) {
-                logsWithRetention.push(logGroupName);
             }
         }
-
-        // Get the number of log groups changed
-        const changedLogGroupsCount = logGroups.length - logsWithRetention.length;
+        const changedLogGroupsCount = logsWithoutRetention.length;
+        const costSavings = estimateCostSavings(logGroups);
 
         // Get the AWS account ID
         const accountId = await getAccountId();
-        const fileName = `loggroups-retention-set-${accountId}.txt`;
-
-        // The WCQ cost savings
-        const costSavings = estimateCostSavings();
-
-        // Write log groups with retention and cost savings to file
+        const fileName = `loggroups-noretention-${accountId}.txt`;
         const writeFile = util.promisify(fs.writeFile);
-        await writeFile(fileName, `Number of changed log groups: ${changedLogGroupsCount}\n\n` +
-            `Log groups with updated retention:\n${JSON.stringify(logsWithRetention, null, 2)}\n\n` +
-            `Estimated cost savings after retention policy: $${costSavings.toFixed(2)} per month`, 'utf8');
+        await writeFile(fileName, `Number of Loggroups with an UPDATED Retention: ${changedLogGroupsCount}\n\n` +
+                  `Estimated cost savings after retention policy: $${costSavings.toFixed(2)} per month\n\n` +
 
-        console.log(`Retention period has been set for ${changedLogGroupsCount} log groups. Log groups with retention have been saved to ${fileName}`);
+            `Log groups with a recently applied 3 day retention:\n${JSON.stringify(logsWithoutRetention, null, 2)}\n\n`, 'utf8');
+
+        console.log(`Log groups without retention have been saved to ${fileName}`);
     } catch (err) {
         console.error('Error:', err);
     }
 }
+// Function to estimate cost savings after retention policy
+function estimateCostSavings(logGroups: string[]): number {
+    // Assume average daily data volume ingested in GB
+    const avgDailyDataVolumeGB = 100;
 
-// Function for getting credentials 
+    // $0.03 per GB a month 
+    const storageCostPerGBMonth = 0.03;
+
+    // Current storage cost without retention policy
+    const currentStorageCost = avgDailyDataVolumeGB * 30 * storageCostPerGBMonth; 
+
+    // Calculate potential storage cost with retention policy (applying the 3 day retention)
+    const retentionStorageCost = (avgDailyDataVolumeGB * 3 * storageCostPerGBMonth) * logGroups.length; 
+
+    // total savings
+    const costSavings = currentStorageCost - retentionStorageCost;
+
+    return costSavings;
+}
+
+// Get AWS account ID
 async function getAccountId(): Promise<string> {
     const sts = new AWS.STS();
     const data = await sts.getCallerIdentity({}).promise();
     return data.Account || '';
-}
-
-// Function to estimate cost savings after retention policy
-function estimateCostSavings(): number {
-    // Assume average daily data volume ingested in GB
-    const avgDailyDataVolumeGB = 100; 
-
-    // $0.03 per GB-month 
-    const storageCostPerGBMonth = 0.03; 
-
-    // Calculate current storage cost without retention policy
-    const currentStorageCost = avgDailyDataVolumeGB * 30 * storageCostPerGBMonth; 
-  
-    // Calculate potential storage cost with retention policy (assuming 3 days retention)
-    const retentionStorageCost = (avgDailyDataVolumeGB * 3) * storageCostPerGBMonth; 
-
-    // Calculate cost savings
-    const costSavings = currentStorageCost - retentionStorageCost;
-
-    return costSavings;
 }
 
 // Run the main function
